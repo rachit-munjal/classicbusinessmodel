@@ -1,8 +1,8 @@
 package com.project.cmb.service;
 
+import com.project.cmb.constant.OrderStatus;
 import com.project.cmb.entity.Order;
 import com.project.cmb.entity.OrderDetail;
-import com.project.cmb.entity.Payment;
 import com.project.cmb.entity.Product;
 import com.project.cmb.exception.InsufficientStockException;
 import com.project.cmb.exception.ResourceNotFoundException;
@@ -16,21 +16,23 @@ import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @AllArgsConstructor
 public class OrderService {
 
-    private final OrderRepo orderRepo;
+    private final OrderRepo       orderRepo;
     private final OrderDetailRepo orderDetailRepo;
-    private final ProductRepo productRepo;
-    private final PaymentRepo paymentRepo;
+    private final ProductRepo     productRepo;
+    private final PaymentRepo     paymentRepo;
 
     public long getTotalOrders()    { return orderRepo.count(); }
-    public long getTotalShipped()   { return orderRepo.countByStatus("Shipped"); }
-    public long getTotalInProcess() { return orderRepo.countByStatus("In Process"); }
-    public long getTotalCancelled() { return orderRepo.countByStatus("Cancelled"); }
+    public long getTotalShipped()   { return orderRepo.countByStatus(OrderStatus.SHIPPED); }
+    public long getTotalInProcess() { return orderRepo.countByStatus(OrderStatus.IN_PROCESS); }
+    public long getTotalCancelled() { return orderRepo.countByStatus(OrderStatus.CANCELLED); }
 
     public BigDecimal getOrderTotal(Integer orderNumber) {
         return orderDetailRepo.findById_OrderNumber(orderNumber)
@@ -52,13 +54,19 @@ public class OrderService {
                 .subtract(getTotalPaymentReceived(orderNumber));
     }
 
+    /**
+     * Creates an order with its line items.
+     * Each product is fetched once: stock validated and stock level updated in a single pass.
+     */
     @Transactional
     public Order createOrder(Order order, List<OrderDetail> orderDetails) {
 
+        // Single pass: fetch each product once, validate stock, keep reference for update
+        Map<String, Product> productMap = new HashMap<>();
         for (OrderDetail detail : orderDetails) {
-            Product product = productRepo.findById(detail.getId().getProductCode())
-                    .orElseThrow(() -> new ResourceNotFoundException(
-                            "Product", "productCode", detail.getId().getProductCode()));
+            String code = detail.getId().getProductCode();
+            Product product = productRepo.findById(code)
+                    .orElseThrow(() -> new ResourceNotFoundException("Product", "productCode", code));
 
             if (product.getQuantityInStock() < detail.getQuantityOrdered()) {
                 throw new InsufficientStockException(
@@ -66,17 +74,17 @@ public class OrderService {
                         product.getQuantityInStock(),
                         detail.getQuantityOrdered());
             }
+            productMap.put(code, product);
         }
 
         Order savedOrder = orderRepo.save(order);
 
+        // Use already-fetched products — no second DB lookup per line item
         for (OrderDetail detail : orderDetails) {
             detail.getId().setOrderNumber(savedOrder.getOrderNumber());
             orderDetailRepo.save(detail);
 
-            Product product = productRepo.findById(detail.getId().getProductCode())
-                    .orElseThrow((() -> new ResourceNotFoundException(
-                            "Product", "productCode", detail.getId().getProductCode())));
+            Product product = productMap.get(detail.getId().getProductCode());
             product.setQuantityInStock(
                     (short) (product.getQuantityInStock() - detail.getQuantityOrdered()));
             productRepo.save(product);
