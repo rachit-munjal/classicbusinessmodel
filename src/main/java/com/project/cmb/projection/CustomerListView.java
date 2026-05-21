@@ -9,6 +9,7 @@ import java.math.BigDecimal;
 public interface CustomerListView {
 
     Integer getCustomerNumber();
+    String getCustomerName();
     String getContactFirstName();
     String getContactLastName();
     String getCity();

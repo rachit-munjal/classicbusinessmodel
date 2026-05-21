@@ -1,13 +1,10 @@
 package com.project.cmb.service;
 
 import com.project.cmb.entity.Customer;
-import com.project.cmb.entity.Order;
-import com.project.cmb.entity.Payment;
 import com.project.cmb.repo.CustomerRepo;
-import com.project.cmb.repo.OrderRepo;
-import com.project.cmb.repo.PaymentRepo;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -18,13 +15,13 @@ import java.util.List;
 public class CustomerService {
 
     private final CustomerRepo customerRepo;
-    private final OrderRepo orderRepo;
-    private final PaymentRepo paymentRepo;
 
+    @Transactional(readOnly = true)
     public long getTotalCustomers() {
         return customerRepo.count();
     }
 
+    @Transactional(readOnly = true)
     public long getTotalCountries() {
         return customerRepo.findAll()
                 .stream()
@@ -33,6 +30,7 @@ public class CustomerService {
                 .count();
     }
 
+    @Transactional(readOnly = true)
     public BigDecimal getAvgCreditLimit() {
         List<Customer> all = customerRepo.findAll();
         if (all.isEmpty()) return BigDecimal.ZERO;

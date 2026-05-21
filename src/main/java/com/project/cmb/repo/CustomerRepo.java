@@ -12,6 +12,8 @@ import java.math.BigDecimal;
 @RepositoryRestResource(path = "customers")
 public interface CustomerRepo extends JpaRepository<Customer, Integer> {
 
+    Customer findTopByOrderByCustomerNumberDesc();
+
     Page<CustomerListView> findByCustomerNameContainingIgnoreCase(String customerName, Pageable pageable);
     Page<CustomerListView> findByPhoneContaining(String phone, Pageable pageable);
 
