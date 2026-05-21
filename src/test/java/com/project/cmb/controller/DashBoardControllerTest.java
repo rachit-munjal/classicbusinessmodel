@@ -1,10 +1,12 @@
 package com.project.cmb.controller;
+
 import com.project.cmb.dto.RecentOrderDto;
 import com.project.cmb.service.DashBoardService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
@@ -14,6 +16,7 @@ import java.util.Map;
 
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -21,9 +24,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class DashBoardControllerTest {
 
     @Autowired MockMvc mockMvc;
-    @MockBean DashBoardService dashBoardService;
+    @MockitoBean DashBoardService dashBoardService;
 
-    // --- GET /api/v1/dashboard/stats ---
+    // ─── GET /api/v1/dashboard/stats ──────────────────────────────
 
     @Test
     void getStats_shouldReturn200() throws Exception {
@@ -68,12 +71,12 @@ class DashBoardControllerTest {
         verify(dashBoardService).getPendingOrdersCount();
     }
 
-    // --- GET /api/v1/dashboard/recent-orders ---
+    // ─── GET /api/v1/dashboard/recent-orders ─────────────────────
 
     @Test
     void getRecentOrders_shouldReturn200AndList() throws Exception {
-        RecentOrderDto dto1 = new RecentOrderDto(10100, LocalDate.of(2003, 1, 6), "Shipped", null, new java.math.BigDecimal("5432.10"));
-        RecentOrderDto dto2 = new RecentOrderDto(10101, LocalDate.of(2003, 1, 9), "In Process", null, new java.math.BigDecimal("2100.00"));
+        RecentOrderDto dto1 = new RecentOrderDto(10100, LocalDate.of(2003, 1, 6),  "Shipped",    null, new BigDecimal("5432.10"));
+        RecentOrderDto dto2 = new RecentOrderDto(10101, LocalDate.of(2003, 1, 9),  "In Process", null, new BigDecimal("2100.00"));
 
         when(dashBoardService.getRecentOrders()).thenReturn(List.of(dto1, dto2));
 
@@ -95,7 +98,7 @@ class DashBoardControllerTest {
                 .andExpect(jsonPath("$.length()").value(0));
     }
 
-    // --- GET /api/v1/dashboard/orders-per-month ---
+    // ─── GET /api/v1/dashboard/orders-per-month ───────────────────
 
     @Test
     void getOrdersPerMonth_shouldReturn200AndMap() throws Exception {
@@ -116,5 +119,13 @@ class DashBoardControllerTest {
         mockMvc.perform(get("/api/v1/dashboard/orders-per-month"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isMap());
+    }
+
+    // ─── DELETE /api/v1/dashboard/cache ───────────────────────────
+
+    @Test
+    void evictDashboardCache_shouldReturn204() throws Exception {
+        mockMvc.perform(delete("/api/v1/dashboard/cache"))
+                .andExpect(status().isNoContent());
     }
 }
